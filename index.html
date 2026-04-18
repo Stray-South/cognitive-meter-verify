@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>cognitive-meter · receipt verifier</title>
+  <meta name="description" content="Paste a cognitive-meter receipt. See which cryptographic check passes or fails." />
+  <style>
+    :root {
+      --bg: #0f1115;
+      --bg-raised: #161a21;
+      --bg-hover: #1d222c;
+      --fg: #e8ecf4;
+      --fg-dim: #9aa3b2;
+      --accent: #7dd3fc;
+      --ok: #4ade80;
+      --err: #f87171;
+      --warn: #fbbf24;
+      --border: #283041;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      line-height: 1.55;
+    }
+    header {
+      padding: 32px 24px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    header h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+    header p {
+      margin: 0;
+      color: var(--fg-dim);
+      max-width: 60ch;
+    }
+    header a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    header a:hover, header a:focus {
+      text-decoration: underline;
+    }
+    main {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 24px;
+      padding: 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    @media (max-width: 800px) {
+      main { grid-template-columns: 1fr; }
+    }
+    section {
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+    }
+    h2 {
+      margin: 0 0 16px;
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--fg-dim);
+    }
+    .samples {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .samples button {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-family: inherit;
+      transition: background 120ms;
+    }
+    .samples button:hover, .samples button:focus-visible {
+      background: var(--bg-hover);
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    .samples button[aria-pressed="true"] {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    textarea {
+      width: 100%;
+      min-height: 340px;
+      background: var(--bg);
+      color: var(--fg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      font-family: var(--mono);
+      font-size: 12.5px;
+      line-height: 1.5;
+      resize: vertical;
+    }
+    textarea:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+      border-color: var(--accent);
+    }
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
+      align-items: center;
+    }
+    button.primary {
+      background: var(--accent);
+      color: #0a0f1a;
+      border: 0;
+      padding: 10px 18px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+    }
+    button.primary:hover, button.primary:focus-visible {
+      filter: brightness(1.1);
+      outline: 2px solid var(--fg);
+      outline-offset: 2px;
+    }
+    .hint {
+      color: var(--fg-dim);
+      font-size: 12.5px;
+    }
+    .checks {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .checks li {
+      padding: 12px 14px;
+      border-radius: 6px;
+      background: var(--bg);
+      border-left: 3px solid var(--border);
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .checks li.ok { border-left-color: var(--ok); }
+    .checks li.err { border-left-color: var(--err); }
+    .icon {
+      font-family: var(--mono);
+      font-weight: 700;
+      min-width: 1.5em;
+    }
+    .icon.ok { color: var(--ok); }
+    .icon.err { color: var(--err); }
+    .check-name {
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 2px;
+    }
+    .check-msg {
+      font-size: 13px;
+      color: var(--fg-dim);
+      font-family: var(--mono);
+      word-break: break-word;
+    }
+    .summary {
+      margin-bottom: 16px;
+      padding: 12px 14px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .summary.ok { background: rgba(74, 222, 128, 0.1); color: var(--ok); }
+    .summary.err { background: rgba(248, 113, 113, 0.1); color: var(--err); }
+    .summary.info { background: rgba(125, 211, 252, 0.1); color: var(--accent); }
+    footer {
+      padding: 24px;
+      text-align: center;
+      color: var(--fg-dim);
+      font-size: 12.5px;
+      border-top: 1px solid var(--border);
+    }
+    footer a { color: var(--fg-dim); }
+    code { font-family: var(--mono); font-size: 0.92em; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>cognitive-meter · receipt verifier</h1>
+    <p>
+      Paste a receipt, or pick a sample. See exactly which check passes or fails —
+      signature, receipt hash, chain link, replay. Spec:
+      <a href="https://github.com/Stray-South/cognitive-meter-public">cognitive-meter-public</a>.
+    </p>
+  </header>
+
+  <main>
+    <section aria-labelledby="input-heading">
+      <h2 id="input-heading">Input</h2>
+      <div class="samples" role="group" aria-label="Sample receipts">
+        <button type="button" data-sample="01-valid.json" aria-pressed="false">01 · valid</button>
+        <button type="button" data-sample="02-tampered-body.json" aria-pressed="false">02 · tampered body</button>
+        <button type="button" data-sample="03-wrong-key.json" aria-pressed="false">03 · wrong key</button>
+        <button type="button" data-sample="04-broken-chain.json" aria-pressed="false">04 · broken chain</button>
+        <button type="button" data-sample="05-replayed.json" aria-pressed="false">05 · replayed</button>
+      </div>
+      <label for="receipt-input" class="hint">Receipt JSON</label>
+      <textarea id="receipt-input" spellcheck="false" aria-describedby="input-hint"></textarea>
+      <div class="actions">
+        <button type="button" class="primary" id="verify-btn">Verify</button>
+        <span class="hint" id="input-hint">
+          Chain and replay checks run against the currently loaded sample sequence.
+        </span>
+      </div>
+    </section>
+
+    <section aria-labelledby="result-heading" aria-live="polite">
+      <h2 id="result-heading">Result</h2>
+      <div id="summary" class="summary info">Load a sample or paste a receipt, then click Verify.</div>
+      <ul id="checks" class="checks"></ul>
+    </section>
+  </main>
+
+  <footer>
+    <p>
+      Built with Web Crypto API (Ed25519 + SHA-256). No server, no tracking.
+      Source:
+      <a href="https://github.com/Stray-South/cognitive-meter-verify">github.com/Stray-South/cognitive-meter-verify</a>
+    </p>
+  </footer>
+
+  <script type="module">
+    import { verifyReceipt, verifyChainLink, detectReplay } from './verify.js';
+
+    const $input = document.getElementById('receipt-input');
+    const $summary = document.getElementById('summary');
+    const $checks = document.getElementById('checks');
+    const $verifyBtn = document.getElementById('verify-btn');
+    const $sampleButtons = document.querySelectorAll('.samples button');
+
+    let publicKeyDoc = null;
+    let sampleCache = new Map();
+    let selectedSample = null;
+
+    (async () => {
+      try {
+        await crypto.subtle.importKey(
+          'raw',
+          new Uint8Array(32),
+          { name: 'Ed25519' },
+          false,
+          ['verify'],
+        );
+      } catch (err) {
+        setSummary(
+          'err',
+          'This browser does not support Ed25519 in Web Crypto. ' +
+          'Use a recent version of Chrome, Firefox, Safari, or Edge.',
+        );
+        $verifyBtn.disabled = true;
+      }
+    })();
+
+    (async () => {
+      try {
+        const res = await fetch('./samples/public-key.json');
+        publicKeyDoc = await res.json();
+      } catch (err) {
+        setSummary('err', 'Could not load samples/public-key.json: ' + err.message);
+      }
+    })();
+
+    (async () => {
+      const names = ['01-valid.json', '02-tampered-body.json', '03-wrong-key.json', '04-broken-chain.json', '05-replayed.json'];
+      await Promise.all(names.map(async name => {
+        try {
+          const res = await fetch('./samples/' + name);
+          sampleCache.set(name, await res.json());
+        } catch (err) {
+          console.warn('Could not preload', name, err);
+        }
+      }));
+    })();
+
+    for (const btn of $sampleButtons) {
+      btn.addEventListener('click', () => {
+        const file = btn.dataset.sample;
+        const data = sampleCache.get(file);
+        if (!data) {
+          setSummary('err', 'Sample not loaded yet — try again in a moment.');
+          return;
+        }
+        selectedSample = file;
+        $input.value = JSON.stringify(data, null, 2);
+        for (const b of $sampleButtons) b.setAttribute('aria-pressed', String(b === btn));
+        resetResult();
+      });
+    }
+
+    $verifyBtn.addEventListener('click', runVerify);
+
+    async function runVerify() {
+      resetResult();
+
+      if (!publicKeyDoc) {
+        setSummary('err', 'Public key not loaded yet.');
+        return;
+      }
+
+      let receipt;
+      try {
+        receipt = JSON.parse($input.value);
+      } catch (err) {
+        setSummary('err', 'Receipt is not valid JSON: ' + err.message);
+        return;
+      }
+
+      const allChecks = [];
+
+      const { results } = await verifyReceipt(receipt, publicKeyDoc);
+      for (const r of results) allChecks.push(r);
+
+      if (selectedSample && selectedSample !== '01-valid.json') {
+        const prev = sampleCache.get('01-valid.json');
+        const link = verifyChainLink(receipt, prev);
+        allChecks.push(link);
+      }
+
+      if (selectedSample === '05-replayed.json') {
+        const seen = new Set();
+        const first = sampleCache.get('01-valid.json');
+        if (first) seen.add(first.receipt_id);
+        allChecks.push(detectReplay(receipt, seen));
+      }
+
+      renderChecks(allChecks);
+
+      const allOk = allChecks.every(c => c.ok);
+      if (allOk) {
+        setSummary('ok', 'All checks passed. Receipt is authentic and chained correctly.');
+      } else {
+        const failed = allChecks.filter(c => !c.ok).map(c => c.check).join(', ');
+        setSummary('err', 'Verification failed: ' + failed);
+      }
+    }
+
+    function setSummary(kind, message) {
+      $summary.className = 'summary ' + kind;
+      $summary.textContent = message;
+    }
+
+    function resetResult() {
+      $checks.innerHTML = '';
+      setSummary('info', 'Ready.');
+    }
+
+    function renderChecks(checks) {
+      $checks.innerHTML = '';
+      for (const c of checks) {
+        const li = document.createElement('li');
+        li.className = c.ok ? 'ok' : 'err';
+        const icon = document.createElement('span');
+        icon.className = 'icon ' + (c.ok ? 'ok' : 'err');
+        icon.textContent = c.ok ? '✓' : '✗';
+        const body = document.createElement('div');
+        const name = document.createElement('div');
+        name.className = 'check-name';
+        name.textContent = c.check;
+        const msg = document.createElement('div');
+        msg.className = 'check-msg';
+        msg.textContent = c.message;
+        body.appendChild(name);
+        body.appendChild(msg);
+        li.appendChild(icon);
+        li.appendChild(body);
+        $checks.appendChild(li);
+      }
+    }
+  </script>
+</body>
+</html>
