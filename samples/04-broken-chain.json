@@ -1,0 +1,35 @@
+{
+  "receipt_version": "0.1",
+  "receipt_id": "rcpt_0004_broken_chain",
+  "issued_at": "2026-04-18T20:00:00Z",
+  "resource": {
+    "method": "POST",
+    "url": "/v1/chat"
+  },
+  "meter_schema": "otel.genai@0.1",
+  "meter": {
+    "tokens": {
+      "input": 500,
+      "output": 1200
+    },
+    "latency_ms": 842,
+    "source": "server_observed",
+    "model": "claude-sonnet-4-5",
+    "tool_calls": 2
+  },
+  "pricing": {
+    "pricing_model_id": "flat+token@v0",
+    "currency": "USD",
+    "actual": "0.02050000"
+  },
+  "hash_chain": {
+    "prev_receipt_hash": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "receipt_hash": "sha256:6cb8c5198690f4072a7bc6b916599ac5b072c08fc0a1c94ba52fa263a9eb7176"
+  },
+  "signature": {
+    "alg": "ed25519",
+    "key_id": "demo-2026-04",
+    "sig": "x7tC7OxJO89IYfJFPwnQ3kKFA7ekEu7t7FFLNLwtJkYqcC7ZUDL0jPj2QMcXir3BIKzKrShd_94B5pF8buWMAw",
+    "verify_keys_url": "./public-key.json"
+  }
+}

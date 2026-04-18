@@ -1,0 +1,7 @@
+{
+  "key_id": "demo-2026-04",
+  "alg": "ed25519",
+  "public_key_b64url": "qpVEhyOBwYY2szuEMWDovjpP4zoV-nCXcoIsiKsy3Ns",
+  "created_at": "2026-04-18T00:00:00Z",
+  "notes": "Demo key for cognitive-meter-verify. Never trust this key for real workloads."
+}
